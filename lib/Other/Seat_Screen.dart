@@ -1,13 +1,9 @@
-// lib/screens/seat_selection_page.dart
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:go_router/go_router.dart'; // <-- 1. ADD THIS IMPORT
+import 'package:go_router/go_router.dart';
 
-// Make sure these paths are correct for your project
 import '../models/seats_model_screen.dart';
 import '../providers/seat_selection_provider.dart';
-// We don't need to import the booking screen here anymore because the router handles it.
 
 class SeatSelectionPage extends StatefulWidget {
   final String busId;
@@ -24,32 +20,31 @@ class SeatSelectionPage extends StatefulWidget {
 }
 
 class _SeatSelectionPageState extends State<SeatSelectionPage> {
-  // Local state for the booking button's loading indicator
   bool _isBooking = false;
 
   @override
   void initState() {
     super.initState();
-    // This safely calls the provider to fetch data just once when the widget is first built.
+    // fetch once if not already in cache
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<SeatSelectionProvider>(context, listen: false)
-          .fetchSeatsForBus(widget.busId);
+      context.read<SeatSelectionProvider>().fetchSeatsForBus(widget.busId);
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    // Get the provider. 'watch' ensures the UI rebuilds when state changes.
     final provider = context.watch<SeatSelectionProvider>();
 
-    // Get all the data for the CURRENT bus using the new, safer methods.
     final seats = provider.getSeatsForBus(widget.busId);
     final selectedSeats = provider.getSelectedSeatsForBus(widget.busId);
     final totalPrice = provider.getTotalPriceForBus(widget.busId);
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.busData['name'] ?? 'Select Seats', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+        title: Text(
+          widget.busData['name'] ?? 'Select Seats',
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        ),
         backgroundColor: Colors.white,
         elevation: 1,
         foregroundColor: Colors.black,
@@ -62,15 +57,14 @@ class _SeatSelectionPageState extends State<SeatSelectionPage> {
                 Expanded(
                   child: seats.isEmpty
                       ? const Center(child: Text("No seat layout found."))
-                      : _buildSeatLayout(seats, provider), // Pass data to helper
+                      : _buildSeatLayout(seats, provider),
                 ),
-                _buildBottomBar(selectedSeats, totalPrice), // Pass data to helper
+                _buildBottomBar(selectedSeats, totalPrice),
               ],
             ),
     );
   }
 
-  // This widget does not need any data from the provider.
   Widget _buildHeader() {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
@@ -86,7 +80,6 @@ class _SeatSelectionPageState extends State<SeatSelectionPage> {
     );
   }
 
-  // This widget now receives the seat list and provider to function correctly.
   Widget _buildSeatLayout(List<SeatModel> seats, SeatSelectionProvider provider) {
     return Container(
       margin: const EdgeInsets.all(16),
@@ -105,12 +98,13 @@ class _SeatSelectionPageState extends State<SeatSelectionPage> {
         itemBuilder: (context, index) {
           final seat = seats[index];
           if (seat.type == 'aisle') return const SizedBox.shrink();
-          if (seat.type == 'driver') return const Icon(Icons.bus_alert, size: 36, color: Colors.grey);
-          
+          if (seat.type == 'driver') {
+            return const Icon(Icons.bus_alert, size: 36, color: Colors.grey);
+          }
+
           return SeatWidget(
             seat: seat,
             onTap: () {
-              // Call the new provider method, passing the busId
               provider.toggleSeatSelection(widget.busId, seat.docId);
             },
           );
@@ -119,10 +113,9 @@ class _SeatSelectionPageState extends State<SeatSelectionPage> {
     );
   }
 
-  // This widget receives the selected seats and total price to display them.
   Widget _buildBottomBar(List<SeatModel> selectedSeats, double totalPrice) {
     final selectedSeatNumbers = selectedSeats.map((s) => s.seatNumber).join(', ');
-    
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
       decoration: BoxDecoration(
@@ -136,23 +129,29 @@ class _SeatSelectionPageState extends State<SeatSelectionPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(selectedSeatNumbers.isEmpty ? "No seats selected" : selectedSeatNumbers, style: const TextStyle(color: Colors.grey, fontSize: 14, fontWeight: FontWeight.w500), overflow: TextOverflow.ellipsis),
+                Text(
+                  selectedSeatNumbers.isEmpty ? "No seats selected" : selectedSeatNumbers,
+                  style: const TextStyle(color: Colors.grey, fontSize: 14, fontWeight: FontWeight.w500),
+                  overflow: TextOverflow.ellipsis,
+                ),
                 const SizedBox(height: 4),
-                Text('Rs ${totalPrice.toStringAsFixed(0)}', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.black)),
+                Text(
+                  'Rs ${totalPrice.toStringAsFixed(0)}',
+                  style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.black),
+                ),
               ],
             ),
           ),
           const SizedBox(width: 16),
           ElevatedButton(
-            // --- 2. THIS IS THE CORRECTED CODE ---
-            onPressed: totalPrice > 0 && !_isBooking ? () {
-              // Use go_router to navigate, matching your app_router.dart file
-              context.go('/booking', extra: {
-                'busId': widget.busId,
-                'busData': widget.busData,
-              });
-            } : null,
-            // ------------------------------------
+            onPressed: totalPrice > 0 && !_isBooking
+                ? () {
+                    context.go('/booking', extra: {
+                      'busId': widget.busId,
+                      'busData': widget.busData,
+                    });
+                  }
+                : null,
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.green,
               disabledBackgroundColor: Colors.grey.shade400,
@@ -161,7 +160,11 @@ class _SeatSelectionPageState extends State<SeatSelectionPage> {
               textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             child: _isBooking
-                ? const SizedBox(height: 24, width: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 3))
+                ? const SizedBox(
+                    height: 24,
+                    width: 24,
+                    child: CircularProgressIndicator(color: Colors.white, strokeWidth: 3),
+                  )
                 : const Text('CONTINUE', style: TextStyle(color: Colors.white)),
           ),
         ],
@@ -170,16 +173,18 @@ class _SeatSelectionPageState extends State<SeatSelectionPage> {
   }
 }
 
-// NO CHANGES ARE NEEDED for these two widgets below.
 class SeatWidget extends StatelessWidget {
   final SeatModel seat;
   final VoidCallback onTap;
+
   const SeatWidget({super.key, required this.seat, required this.onTap});
+
   @override
   Widget build(BuildContext context) {
     Color backgroundColor = Colors.white;
     Color borderColor = Colors.grey.shade400;
     Color textColor = Colors.black;
+
     if (seat.isSelectedByCurrentUser) {
       backgroundColor = Colors.green;
       borderColor = Colors.green;
@@ -189,6 +194,7 @@ class SeatWidget extends StatelessWidget {
       borderColor = Colors.grey.shade300;
       textColor = Colors.grey.shade500;
     }
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -199,7 +205,10 @@ class SeatWidget extends StatelessWidget {
           borderRadius: BorderRadius.circular(seat.type == 'sleeper' ? 8 : 6),
         ),
         child: Center(
-          child: Text(seat.seatNumber, style: TextStyle(color: textColor, fontSize: 11, fontWeight: FontWeight.w600)),
+          child: Text(
+            seat.seatNumber,
+            style: TextStyle(color: textColor, fontSize: 11, fontWeight: FontWeight.w600),
+          ),
         ),
       ),
     );
@@ -210,12 +219,22 @@ class _SeatInfoLabel extends StatelessWidget {
   final IconData icon;
   final Color color;
   final String text;
+
   const _SeatInfoLabel({required this.icon, required this.color, required this.text});
+
   @override
   Widget build(BuildContext context) {
     return Row(children: [
       if (color == Colors.white)
-        Container(width: 16, height: 16, decoration: BoxDecoration(color: Colors.white, border: Border.all(color: Colors.grey), borderRadius: BorderRadius.circular(4)))
+        Container(
+          width: 16,
+          height: 16,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            border: Border.all(color: Colors.grey),
+            borderRadius: BorderRadius.circular(4),
+          ),
+        )
       else
         Icon(icon, color: color, size: 20),
       const SizedBox(width: 8),

@@ -6,6 +6,7 @@ import 'firebase_options.dart';
 import 'package:provider/provider.dart';
 import 'providers/seat_selection_provider.dart';
 
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(

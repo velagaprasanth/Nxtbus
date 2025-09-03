@@ -243,7 +243,7 @@ class _NxtBusScreenState extends State<NxtBusScreen> {
           onTap: () => Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (_) => SeatsPage(busId: busDoc.id, busData: busData),
+              builder: (_) => SeatsPage(busId: busDoc.id, busData: busData, from: '', to: '', date: ''),
             ),
           ),
           child: BusResultCard(busData: busData),

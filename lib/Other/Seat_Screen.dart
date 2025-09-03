@@ -6,7 +6,7 @@ import 'payment_screen.dart'; // Razorpay checkout page
 class SeatsPage extends StatefulWidget {
   final String busId;
 
-  const SeatsPage({super.key, required this.busId, required Map<String, dynamic> busData});
+  const SeatsPage({super.key, required this.busId, required Map<String, dynamic> busData, required String from, required String to, required String date});
 
   @override
   State<SeatsPage> createState() => _SeatsPageState();

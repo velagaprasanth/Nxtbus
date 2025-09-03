@@ -1,6 +1,10 @@
 // lib/pages/payment_page.dart
 import 'package:flutter/material.dart';
 import 'package:razorpay_flutter/razorpay_flutter.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+
+import '../auth/Login_Screen.dart'; // make sure you have this path correct
 
 class PaymentPage extends StatefulWidget {
   final int amount;
@@ -20,16 +24,45 @@ class PaymentPage extends StatefulWidget {
 
 class _PaymentPageState extends State<PaymentPage> {
   late Razorpay _razorpay;
+  User? currentUser;
+  String? userEmail;
+  String? userPhone;
 
   @override
   void initState() {
     super.initState();
+
+    currentUser = FirebaseAuth.instance.currentUser;
+
+    if (currentUser == null) {
+      // 🚨 No user logged in → send to login screen
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const LoginPage()),
+        );
+      });
+    } else {
+      // ✅ Fetch user details from Firestore
+      FirebaseFirestore.instance
+          .collection("users")
+          .doc(currentUser!.uid)
+          .get()
+          .then((doc) {
+        if (doc.exists) {
+          setState(() {
+            userEmail = doc["email"];
+            userPhone = doc["phone"];
+          });
+          _openCheckout();
+        }
+      });
+    }
+
     _razorpay = Razorpay();
     _razorpay.on(Razorpay.EVENT_PAYMENT_SUCCESS, _handlePaymentSuccess);
     _razorpay.on(Razorpay.EVENT_PAYMENT_ERROR, _handlePaymentError);
     _razorpay.on(Razorpay.EVENT_EXTERNAL_WALLET, _handleExternalWallet);
-
-    _openCheckout();
   }
 
   @override
@@ -40,11 +73,14 @@ class _PaymentPageState extends State<PaymentPage> {
 
   void _openCheckout() {
     var options = {
-      'key': 'rzp_test_RCmYb3XTMb99xT', // TODO: replace with your Razorpay Key ID
-      'amount': widget.amount * 100, // Razorpay needs amount in paise
+      'key': 'rzp_test_RCmYb3XTMb99xT', // replace with your key
+      'amount': widget.amount * 100,
       'name': 'Bus Booking',
       'description': 'Seat booking for Bus ${widget.busId}',
-      'prefill': {'contact': '9876543210', 'email': 'test@example.com'},
+      'prefill': {
+        'contact': userPhone ?? "0000000000",
+        'email': userEmail ?? "guest@example.com",
+      },
       'external': {
         'wallets': ['paytm']
       }

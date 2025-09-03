@@ -18,14 +18,14 @@ final approuter = GoRouter(
   routes: [
     GoRoute(path: "/", builder: (context, state) => SplashScreen()),
     GoRoute(path: "/login", builder: (context, state) => YoloBusScreen()),
-    GoRoute(path: "/register", builder: (context, state) => RegisterPage()),
+    GoRoute(path: "/register", builder: (context, state) => RegisterScreen()),
     ShellRoute(
       builder: (context, state, child) => BottomBar(child: child),
       routes: [
         GoRoute(path: "/home", builder: (context, state) => YoloBusScreen()),
         GoRoute(path: "/trip", builder: (context, state) => AddBusDetailsPage()),
         GoRoute(path: "/routes", builder: (context, state) => NxtBusScreen()),
-        GoRoute(path: "/more", builder: (context, state) => SearchBusesPage()),
+        GoRoute(path: "/more", builder: (context, state) => ProfileMoreScreen()),
         
       ],
     ),

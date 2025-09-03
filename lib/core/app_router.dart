@@ -24,7 +24,7 @@ final approuter = GoRouter(
       routes: [
         GoRoute(path: "/home", builder: (context, state) => YoloBusScreen()),
         GoRoute(path: "/trip", builder: (context, state) => AddBusDetailsPage()),
-        GoRoute(path: "/routes", builder: (context, state) => BusSearchPage()),
+        GoRoute(path: "/routes", builder: (context, state) => NxtBusScreen()),
         GoRoute(path: "/more", builder: (context, state) => SearchBusesPage()),
         
       ],

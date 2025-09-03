@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:nxtbus/Screens/Routes_Screen.dart';
+import 'package:nxtbus/Other/Seat_Screen.dart';
+
 
 // --- IMPORTANT: ADD THIS IMPORT ---
 // Make sure the path to your seat selection page is correct
@@ -113,7 +114,7 @@ class _SearchBusesPageState extends State<SearchBusesPage> {
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) => SeatSelectionPage(
+                builder: (context) => SeatsPage(
                   busId: busDoc.id,       // Pass the unique document ID
                   busData: busData,       // Pass the rest of the bus data
                 ),

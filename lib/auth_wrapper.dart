@@ -40,14 +40,21 @@ class AuthWrapper extends StatelessWidget {
                 );
               }
 
-              // Check the 'role' field from the database
-              final role = userSnapshot.data?.get('role');
+              // Handle cases where the document might not exist or there's an error
+              if (userSnapshot.hasError || !userSnapshot.hasData || !userSnapshot.data!.exists) {
+                  // Default to the user screen if we can't get user data
+                  return const YoloBusScreen();
+              }
 
-              if (role == 'owner') {
+              // Safely get the data map
+              final data = userSnapshot.data!.data() as Map<String, dynamic>?;
+
+              // Check if the 'role' field exists and what its value is
+              if (data != null && data.containsKey('role') && data['role'] == 'owner') {
                 // If role is 'owner', show the OwnerBottomNav
                 return const OwnerBottomNav();
               } else {
-                // For any other role (e.g., 'user'), show the normal Customer BottomBar
+                // For any other role (e.g., 'user', or if role is missing), show the normal screen
                 return const YoloBusScreen();
               }
             },

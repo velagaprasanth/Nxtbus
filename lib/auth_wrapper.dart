@@ -48,7 +48,7 @@ class AuthWrapper extends StatelessWidget {
                 return const OwnerBottomNav();
               } else {
                 // For any other role (e.g., 'user'), show the normal Customer BottomBar
-                return const BottomBar(child: YoloBusScreen());
+                return const YoloBusScreen();
               }
             },
           );
@@ -56,7 +56,7 @@ class AuthWrapper extends StatelessWidget {
 
         // If a user IS NOT logged in (is a guest)
         // Show the normal customer interface by default.
-        return const BottomBar(child: YoloBusScreen());
+        return const YoloBusScreen();
       },
     );
   }

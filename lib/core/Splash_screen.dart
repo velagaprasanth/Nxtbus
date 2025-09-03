@@ -16,7 +16,7 @@ class _SplashScreenState extends State<SplashScreen> {
     super.initState();
     print("This is initstate");
     Future.delayed(Duration(seconds: 3), () {
-      context.go("/home");
+      context.go("/auth");
     });
   }
 

@@ -28,8 +28,8 @@ final approuter = GoRouter(
       builder: (context, state, child) => BottomBar(child: child),
       routes: [
         GoRoute(path: "/home", builder: (context, state) => YoloBusScreen()),
-        GoRoute(path: "/trip", builder: (context, state) => TripsScreen()), // Assuming TripsScreen is AddBusDetailsPage
-        GoRoute(path: "/routes", builder: (context, state) => NxtBusScreen()), // Assuming RoutesScreen is NxtBusScreen
+        GoRoute(path: "/trip", builder: (context, state) => ActiveTripsScreen()), // Assuming TripsScreen is AddBusDetailsPage
+        GoRoute(path: "/routes", builder: (context, state) => AllRoutesScreen()), // Assuming RoutesScreen is NxtBusScreen
         GoRoute(path: "/more", builder: (context, state) => ProfileMoreScreen()),
       ],
     ),

@@ -1,8 +1,10 @@
+// lib/owner_screens.dart/add_bus_details_page.dart
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-// 1. ADD THIS IMPORT TO GET THE LOGGED-IN USER
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:intl/intl.dart';
 
 // --- Color Palette based on the NXTBus image ---
 const Color nxtbusPrimaryBlue = Color(0xFF1E88E5);
@@ -31,6 +33,8 @@ class _AddBusDetailsPageState extends State<AddBusDetailsPage> {
   final _seatsAvailableController = TextEditingController();
   final _berthInfoController = TextEditingController();
   final _tagsController = TextEditingController();
+  final _travelDateController =
+      TextEditingController(); // Controller for the travel date
 
   @override
   void dispose() {
@@ -44,11 +48,14 @@ class _AddBusDetailsPageState extends State<AddBusDetailsPage> {
     _seatsAvailableController.dispose();
     _berthInfoController.dispose();
     _tagsController.dispose();
+    _travelDateController
+        .dispose(); // Dispose the new controller
     super.dispose();
   }
 
   // Helper function to show Time Picker
-  Future<void> _selectTime(BuildContext context, TextEditingController controller) async {
+  Future<void> _selectTime(
+      BuildContext context, TextEditingController controller) async {
     final TimeOfDay? picked = await showTimePicker(
       context: context,
       initialTime: TimeOfDay.now(),
@@ -56,7 +63,8 @@ class _AddBusDetailsPageState extends State<AddBusDetailsPage> {
         return Theme(
           data: ThemeData.light().copyWith(
             colorScheme: const ColorScheme.light(primary: nxtbusPrimaryBlue),
-            buttonTheme: const ButtonThemeData(textTheme: ButtonTextTheme.primary),
+            buttonTheme:
+                const ButtonThemeData(textTheme: ButtonTextTheme.primary),
           ),
           child: child!,
         );
@@ -65,6 +73,22 @@ class _AddBusDetailsPageState extends State<AddBusDetailsPage> {
     if (picked != null) {
       setState(() {
         controller.text = picked.format(context);
+      });
+    }
+  }
+
+  // Helper function to show Date Picker
+  Future<void> _selectDate(
+      BuildContext context, TextEditingController controller) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime.now(),
+      lastDate: DateTime(2101),
+    );
+    if (picked != null) {
+      setState(() {
+        controller.text = DateFormat('yyyy-MM-dd').format(picked);
       });
     }
   }
@@ -87,15 +111,16 @@ class _AddBusDetailsPageState extends State<AddBusDetailsPage> {
       try {
         final collection = FirebaseFirestore.instance.collection('buses');
 
-        final fromLocationFormatted = _fromLocationController.text.trim().toLowerCase();
-        final toLocationFormatted = _toLocationController.text.trim().toLowerCase();
-        
+        final fromLocationFormatted =
+            _fromLocationController.text.trim().toLowerCase();
+        final toLocationFormatted =
+            _toLocationController.text.trim().toLowerCase();
+
         final tagsList = _tagsController.text.isEmpty
             ? []
             : _tagsController.text.split(',').map((tag) => tag.trim()).toList();
 
         final busData = {
-          // 2. THIS IS THE NEW LINE THAT LINKS THE BUS TO THE OWNER
           "ownerId": user.uid,
           "from_location": fromLocationFormatted,
           "to_location": toLocationFormatted,
@@ -103,6 +128,8 @@ class _AddBusDetailsPageState extends State<AddBusDetailsPage> {
           "bus_type": _busTypeController.text.trim(),
           "departure_time": _departureTimeController.text.trim(),
           "arrival_time": _arrivalTimeController.text.trim(),
+          "travel_date": _travelDateController.text
+              .trim(), // Add the travel date to Firestore
           "price": {
             "amount": double.tryParse(_priceController.text) ?? 0,
             "currency": "INR"
@@ -132,7 +159,7 @@ class _AddBusDetailsPageState extends State<AddBusDetailsPage> {
         _seatsAvailableController.clear();
         _berthInfoController.clear();
         _tagsController.clear();
-
+        _travelDateController.clear(); // Clear the new controller
       } catch (error) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -149,7 +176,8 @@ class _AddBusDetailsPageState extends State<AddBusDetailsPage> {
     return Scaffold(
       backgroundColor: white,
       appBar: AppBar(
-        title: const Text('Add New Bus Route', style: TextStyle(color: white, fontWeight: FontWeight.bold)),
+        title: const Text('Add New Bus Route',
+            style: TextStyle(color: white, fontWeight: FontWeight.bold)),
         backgroundColor: nxtbusPrimaryBlue,
         elevation: 0,
         centerTitle: true,
@@ -176,44 +204,102 @@ class _AddBusDetailsPageState extends State<AddBusDetailsPage> {
                 _buildSectionTitle('Route Details'),
                 Row(
                   children: [
-                    Expanded(child: _buildTextField(controller: _fromLocationController, label: 'From', icon: Icons.trip_origin, hint: 'e.g., Hyderabad')),
+                    Expanded(
+                        child: _buildTextField(
+                            controller: _fromLocationController,
+                            label: 'From',
+                            icon: Icons.trip_origin,
+                            hint: 'e.g., Hyderabad')),
                     const SizedBox(width: 16),
-                    Expanded(child: _buildTextField(controller: _toLocationController, label: 'To', icon: Icons.location_on, hint: 'e.g., Bangalore')),
+                    Expanded(
+                        child: _buildTextField(
+                            controller: _toLocationController,
+                            label: 'To',
+                            icon: Icons.location_on,
+                            hint: 'e.g., Bangalore')),
                   ],
                 ),
                 const SizedBox(height: 16),
-                _buildTextField(controller: _nameController, label: 'Bus Operator Name', icon: Icons.directions_bus, hint: 'e.g., Orange Travels'),
+                _buildTextField(
+                    controller: _nameController,
+                    label: 'Bus Operator Name',
+                    icon: Icons.directions_bus,
+                    hint: 'e.g., Orange Travels'),
                 const SizedBox(height: 24),
                 _buildSectionTitle('Trip & Booking Details'),
-                _buildTextField(controller: _busTypeController, label: 'Bus Type', icon: Icons.category, hint: 'e.g., Volvo AC Sleeper'),
+                _buildTextField(
+                    controller: _busTypeController,
+                    label: 'Bus Type',
+                    icon: Icons.category,
+                    hint: 'e.g., Volvo AC Sleeper'),
+                const SizedBox(height: 16),
+                _buildDateField(
+                    controller: _travelDateController,
+                    label: 'Travel Date',
+                    icon: Icons.calendar_today),
                 const SizedBox(height: 16),
                 Row(
                   children: [
-                    Expanded(child: _buildTimeField(controller: _departureTimeController, label: 'Departure Time', icon: Icons.schedule)),
+                    Expanded(
+                        child: _buildTimeField(
+                            controller: _departureTimeController,
+                            label: 'Departure Time',
+                            icon: Icons.schedule)),
                     const SizedBox(width: 16),
-                    Expanded(child: _buildTimeField(controller: _arrivalTimeController, label: 'Arrival Time', icon: Icons.hourglass_empty)),
+                    Expanded(
+                        child: _buildTimeField(
+                            controller: _arrivalTimeController,
+                            label: 'Arrival Time',
+                            icon: Icons.hourglass_empty)),
                   ],
                 ),
                 const SizedBox(height: 16),
                 Row(
                   children: [
-                    Expanded(child: _buildTextField(controller: _priceController, label: 'Price (INR)', icon: Icons.currency_rupee, keyboardType: TextInputType.number)),
+                    Expanded(
+                        child: _buildTextField(
+                            controller: _priceController,
+                            label: 'Price (INR)',
+                            icon: Icons.currency_rupee,
+                            keyboardType: TextInputType.number)),
                     const SizedBox(width: 16),
-                    Expanded(child: _buildTextField(controller: _seatsAvailableController, label: 'Seats Available', icon: Icons.event_seat_outlined, keyboardType: TextInputType.number)),
+                    Expanded(
+                        child: _buildTextField(
+                            controller: _seatsAvailableController,
+                            label: 'Seats Available',
+                            icon: Icons.event_seat_outlined,
+                            keyboardType: TextInputType.number)),
                   ],
                 ),
                 const SizedBox(height: 16),
-                _buildTextField(controller: _berthInfoController, label: 'Berth Information (Optional)', icon: Icons.bed_outlined, isRequired: false),
+                _buildTextField(
+                    controller: _berthInfoController,
+                    label: 'Berth Information (Optional)',
+                    icon: Icons.bed_outlined,
+                    isRequired: false),
                 const SizedBox(height: 16),
-                _buildTextField(controller: _tagsController, label: 'Tags (Optional, comma separated)', icon: Icons.local_offer_outlined, isRequired: false),
+                _buildTextField(
+                    controller: _tagsController,
+                    label: 'Tags (Optional, comma separated)',
+                    icon: Icons.local_offer_outlined,
+                    isRequired: false),
                 const SizedBox(height: 30),
                 Center(
                   child: Container(
                     width: double.infinity,
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(12),
-                      gradient: LinearGradient(colors: [nxtbusPrimaryBlue, Colors.blue.shade700], begin: Alignment.topLeft, end: Alignment.bottomRight),
-                      boxShadow: [BoxShadow(color: nxtbusPrimaryBlue.withOpacity(0.4), spreadRadius: 2, blurRadius: 8, offset: const Offset(0, 4))],
+                      gradient: LinearGradient(
+                          colors: [nxtbusPrimaryBlue, Colors.blue.shade700],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight),
+                      boxShadow: [
+                        BoxShadow(
+                            color: nxtbusPrimaryBlue.withOpacity(0.4),
+                            spreadRadius: 2,
+                            blurRadius: 8,
+                            offset: const Offset(0, 4))
+                      ],
                     ),
                     child: ElevatedButton(
                       onPressed: _submitForm,
@@ -221,9 +307,14 @@ class _AddBusDetailsPageState extends State<AddBusDetailsPage> {
                         backgroundColor: Colors.transparent,
                         shadowColor: Colors.transparent,
                         padding: const EdgeInsets.symmetric(vertical: 18),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12)),
                       ),
-                      child: const Text('Add Bus to Database', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: white)),
+                      child: const Text('Add Bus to Database',
+                          style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: white)),
                     ),
                   ),
                 ),
@@ -238,16 +329,32 @@ class _AddBusDetailsPageState extends State<AddBusDetailsPage> {
   Widget _buildSectionTitle(String title) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12.0),
-      child: Text(title, style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: nxtbusDarkText)),
+      child: Text(title,
+          style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: nxtbusDarkText)),
     );
   }
 
-  Widget _buildTextField({required TextEditingController controller, required String label, required IconData icon, bool isRequired = true, TextInputType keyboardType = TextInputType.text, String? hint}) {
+  Widget _buildTextField(
+      {required TextEditingController controller,
+      required String label,
+      required IconData icon,
+      bool isRequired = true,
+      TextInputType keyboardType = TextInputType.text,
+      String? hint}) {
     return Container(
       decoration: BoxDecoration(
         color: white,
         borderRadius: BorderRadius.circular(12),
-        boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.1), spreadRadius: 1, blurRadius: 3, offset: const Offset(0, 1))],
+        boxShadow: [
+          BoxShadow(
+              color: Colors.grey.withOpacity(0.1),
+              spreadRadius: 1,
+              blurRadius: 3,
+              offset: const Offset(0, 1))
+        ],
       ),
       child: TextFormField(
         controller: controller,
@@ -261,12 +368,24 @@ class _AddBusDetailsPageState extends State<AddBusDetailsPage> {
           prefixIcon: Icon(icon, color: nxtbusPrimaryBlue),
           filled: true,
           fillColor: white,
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12.0), borderSide: BorderSide.none),
-          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12.0), borderSide: BorderSide(color: nxtbusPrimaryBlue.withOpacity(0.6), width: 2)),
-          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12.0), borderSide: BorderSide(color: Colors.grey.shade200, width: 1)),
-          errorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12.0), borderSide: const BorderSide(color: Colors.red, width: 1)),
-          focusedErrorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12.0), borderSide: const BorderSide(color: Colors.red, width: 2)),
-          contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+          border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12.0),
+              borderSide: BorderSide.none),
+          focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12.0),
+              borderSide:
+                  BorderSide(color: nxtbusPrimaryBlue.withOpacity(0.6), width: 2)),
+          enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12.0),
+              borderSide: BorderSide(color: Colors.grey.shade200, width: 1)),
+          errorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12.0),
+              borderSide: const BorderSide(color: Colors.red, width: 1)),
+          focusedErrorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12.0),
+              borderSide: const BorderSide(color: Colors.red, width: 2)),
+          contentPadding:
+              const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
         ),
         validator: (value) {
           if (isRequired && (value == null || value.isEmpty)) {
@@ -278,12 +397,77 @@ class _AddBusDetailsPageState extends State<AddBusDetailsPage> {
     );
   }
 
-  Widget _buildTimeField({required TextEditingController controller, required String label, required IconData icon}) {
+  Widget _buildDateField(
+      {required TextEditingController controller,
+      required String label,
+      required IconData icon}) {
     return Container(
       decoration: BoxDecoration(
         color: white,
         borderRadius: BorderRadius.circular(12),
-        boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.1), spreadRadius: 1, blurRadius: 3, offset: const Offset(0, 1))],
+        boxShadow: [
+          BoxShadow(
+              color: Colors.grey.withOpacity(0.1),
+              spreadRadius: 1,
+              blurRadius: 3,
+              offset: const Offset(0, 1))
+        ],
+      ),
+      child: TextFormField(
+        controller: controller,
+        readOnly: true,
+        onTap: () => _selectDate(context, controller),
+        style: TextStyle(color: nxtbusDarkText),
+        decoration: InputDecoration(
+          labelText: label,
+          labelStyle: TextStyle(color: nxtbusLightText),
+          prefixIcon: Icon(icon, color: nxtbusPrimaryBlue),
+          filled: true,
+          fillColor: white,
+          border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12.0),
+              borderSide: BorderSide.none),
+          focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12.0),
+              borderSide:
+                  BorderSide(color: nxtbusPrimaryBlue.withOpacity(0.6), width: 2)),
+          enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12.0),
+              borderSide: BorderSide(color: Colors.grey.shade200, width: 1)),
+          errorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12.0),
+              borderSide: const BorderSide(color: Colors.red, width: 1)),
+          focusedErrorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12.0),
+              borderSide: const BorderSide(color: Colors.red, width: 2)),
+          contentPadding:
+              const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+        ),
+        validator: (value) {
+          if (value == null || value.isEmpty) {
+            return 'Please select a date';
+          }
+          return null;
+        },
+      ),
+    );
+  }
+
+  Widget _buildTimeField(
+      {required TextEditingController controller,
+      required String label,
+      required IconData icon}) {
+    return Container(
+      decoration: BoxDecoration(
+        color: white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+              color: Colors.grey.withOpacity(0.1),
+              spreadRadius: 1,
+              blurRadius: 3,
+              offset: const Offset(0, 1))
+        ],
       ),
       child: TextFormField(
         controller: controller,
@@ -296,12 +480,24 @@ class _AddBusDetailsPageState extends State<AddBusDetailsPage> {
           prefixIcon: Icon(icon, color: nxtbusPrimaryBlue),
           filled: true,
           fillColor: white,
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12.0), borderSide: BorderSide.none),
-          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12.0), borderSide: BorderSide(color: nxtbusPrimaryBlue.withOpacity(0.6), width: 2)),
-          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12.0), borderSide: BorderSide(color: Colors.grey.shade200, width: 1)),
-          errorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12.0), borderSide: const BorderSide(color: Colors.red, width: 1)),
-          focusedErrorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12.0), borderSide: const BorderSide(color: Colors.red, width: 2)),
-          contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+          border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12.0),
+              borderSide: BorderSide.none),
+          focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12.0),
+              borderSide:
+                  BorderSide(color: nxtbusPrimaryBlue.withOpacity(0.6), width: 2)),
+          enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12.0),
+              borderSide: BorderSide(color: Colors.grey.shade200, width: 1)),
+          errorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12.0),
+              borderSide: const BorderSide(color: Colors.red, width: 1)),
+          focusedErrorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12.0),
+              borderSide: const BorderSide(color: Colors.red, width: 2)),
+          contentPadding:
+              const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
         ),
         validator: (value) {
           if (value == null || value.isEmpty) {

@@ -1,3 +1,5 @@
+// lib/Other/available_buses_screen.dart
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -39,12 +41,15 @@ class _AvailableBusesScreenState extends State<AvailableBusesScreen> {
 
   Future<void> _fetchBuses() async {
     setState(() => _isLoading = true);
-    
+
     try {
       final querySnapshot = await FirebaseFirestore.instance
           .collection('buses')
           .where('from_location', isEqualTo: widget.from.toLowerCase())
           .where('to_location', isEqualTo: widget.to.toLowerCase())
+          .where('travel_date',
+              isEqualTo: widget
+                  .date) // Add this line to filter by the selected date
           .get();
 
       setState(() {
@@ -93,10 +98,12 @@ class _AvailableBusesScreenState extends State<AvailableBusesScreen> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) =>SeatsPage(
+        builder: (context) => SeatsPage(
           busData: busData,
-          busId: busId, from: '', to: '', date: '',
-          
+          busId: busId,
+          from: '',
+          to: '',
+          date: '',
         ),
       ),
     );
@@ -161,10 +168,12 @@ class _AvailableBusesScreenState extends State<AvailableBusesScreen> {
                           ),
                           child: Row(
                             children: [
-                              Icon(Icons.calendar_today, color: nxtbusPrimaryBlue, size: 20),
+                              Icon(Icons.calendar_today,
+                                  color: nxtbusPrimaryBlue, size: 20),
                               const SizedBox(width: 8),
                               Text(
-                                DateFormat('EEE, MMM dd').format(DateTime.parse(widget.date)),
+                                DateFormat('EEE, MMM dd')
+                                    .format(DateTime.parse(widget.date)),
                                 style: TextStyle(
                                   color: nxtbusDarkText,
                                   fontWeight: FontWeight.w600,
@@ -215,7 +224,7 @@ class _AvailableBusesScreenState extends State<AvailableBusesScreen> {
               ),
             ),
           ),
-          
+
           // Bus List
           Expanded(
             child: _isLoading
@@ -238,7 +247,8 @@ class _AvailableBusesScreenState extends State<AvailableBusesScreen> {
                           padding: const EdgeInsets.all(16),
                           itemCount: _busResults.length,
                           itemBuilder: (context, index) {
-                            final bus = _busResults[index].data() as Map<String, dynamic>;
+                            final bus =
+                                _busResults[index].data() as Map<String, dynamic>;
                             final busId = _busResults[index].id;
                             return _buildBusCard(bus, busId);
                           },
@@ -381,7 +391,8 @@ class _AvailableBusesScreenState extends State<AvailableBusesScreen> {
                       ),
                     ),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding:
+                          const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
                         color: Colors.green[50],
                         borderRadius: BorderRadius.circular(6),
@@ -397,9 +408,9 @@ class _AvailableBusesScreenState extends State<AvailableBusesScreen> {
                     ),
                   ],
                 ),
-                
+
                 const SizedBox(height: 16),
-                
+
                 // Time and Route
                 Row(
                   children: [
@@ -424,9 +435,9 @@ class _AvailableBusesScreenState extends State<AvailableBusesScreen> {
                         ),
                       ],
                     ),
-                    
+
                     const SizedBox(width: 16),
-                    
+
                     // Route Line
                     Expanded(
                       child: Column(
@@ -478,9 +489,9 @@ class _AvailableBusesScreenState extends State<AvailableBusesScreen> {
                         ],
                       ),
                     ),
-                    
+
                     const SizedBox(width: 16),
-                    
+
                     // Arrival
                     Column(
                       children: [
@@ -504,9 +515,9 @@ class _AvailableBusesScreenState extends State<AvailableBusesScreen> {
                     ),
                   ],
                 ),
-                
+
                 const SizedBox(height: 16),
-                
+
                 // Tags and Price
                 Row(
                   children: [
@@ -515,21 +526,27 @@ class _AvailableBusesScreenState extends State<AvailableBusesScreen> {
                           ? Wrap(
                               spacing: 6,
                               runSpacing: 4,
-                              children: tags.take(3).map((tag) => Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: nxtbusPrimaryBlue.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Text(
-                                  tag.toString(),
-                                  style: TextStyle(
-                                    color: nxtbusPrimaryBlue,
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              )).toList(),
+                              children: tags
+                                  .take(3)
+                                  .map((tag) => Container(
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 8, vertical: 2),
+                                        decoration: BoxDecoration(
+                                          color:
+                                              nxtbusPrimaryBlue.withOpacity(0.1),
+                                          borderRadius:
+                                              BorderRadius.circular(12),
+                                        ),
+                                        child: Text(
+                                          tag.toString(),
+                                          style: TextStyle(
+                                            color: nxtbusPrimaryBlue,
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                      ))
+                                  .toList(),
                             )
                           : const SizedBox(),
                     ),
@@ -555,9 +572,9 @@ class _AvailableBusesScreenState extends State<AvailableBusesScreen> {
                     ),
                   ],
                 ),
-                
+
                 const SizedBox(height: 12),
-                
+
                 // Action Button
                 Container(
                   width: double.infinity,
@@ -565,7 +582,7 @@ class _AvailableBusesScreenState extends State<AvailableBusesScreen> {
                   color: Colors.grey[200],
                 ),
                 const SizedBox(height: 12),
-                
+
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -597,22 +614,22 @@ class _AvailableBusesScreenState extends State<AvailableBusesScreen> {
   String _calculateDuration(String departure, String arrival) {
     try {
       if (departure.isEmpty || arrival.isEmpty) return '--h --m';
-      
+
       final depTime = TimeOfDay.fromDateTime(DateFormat.jm().parse(departure));
       final arrTime = TimeOfDay.fromDateTime(DateFormat.jm().parse(arrival));
-      
+
       int depMinutes = depTime.hour * 60 + depTime.minute;
       int arrMinutes = arrTime.hour * 60 + arrTime.minute;
-      
+
       // Handle next day arrival
       if (arrMinutes < depMinutes) {
         arrMinutes += 24 * 60;
       }
-      
+
       final duration = arrMinutes - depMinutes;
       final hours = duration ~/ 60;
       final minutes = duration % 60;
-      
+
       return '${hours}h ${minutes}m';
     } catch (e) {
       return '--h --m';
@@ -685,4 +702,4 @@ class SeatSelectionPage extends StatelessWidget {
       ),
     );
   }
-}
+}       

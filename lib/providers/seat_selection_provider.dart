@@ -8,6 +8,15 @@ class SeatSelectionProvider extends ChangeNotifier {
   bool _isLoading = false;
   bool get isLoading => _isLoading;
 
+  // --- ADD THIS NEW METHOD ---
+  /// Clears all cached seat data and selections.
+  void clear() {
+    _cachedBusSeats.clear();
+    notifyListeners();
+    print("SeatSelectionProvider cleared!"); // For debugging
+  }
+  // -------------------------
+
   List<SeatModel> getSeatsForBus(String busId) {
     return _cachedBusSeats[busId] ?? [];
   }

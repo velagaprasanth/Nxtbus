@@ -1,296 +1,170 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:intl/intl.dart';
-import 'package:nxtbus/Other/Seat_Screen.dart';
+import 'package:nxtbus/models/bus_model.dart';
 
-/// ---------- COLORS ----------
-const Color nxtbusPrimaryBlue = Color(0xFF1E88E5);
-const Color nxtbusAccentBlue = Color(0xFF42A5F5);
-const Color nxtbusDarkText = Color(0xFF212121);
-const Color nxtbusLightText = Color(0xFF757575);
+// A simple model for a route to handle uniqueness
+class BusRoute {
+  final String from;
+  final String to;
+  BusRoute(this.from, this.to);
 
-/// ---------- MAIN SCREEN ----------
-class NxtBusScreen extends StatefulWidget {
   @override
-  _NxtBusScreenState createState() => _NxtBusScreenState();
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is BusRoute &&
+          runtimeType == other.runtimeType &&
+          from == other.from &&
+          to == other.to;
+
+  @override
+  int get hashCode => from.hashCode ^ to.hashCode;
 }
 
-class _NxtBusScreenState extends State<NxtBusScreen> {
-  DateTime selectedDate = DateTime.now();
-  final TextEditingController _fromController = TextEditingController();
-  final TextEditingController _toController = TextEditingController();
+class AllRoutesScreen extends StatefulWidget {
+  const AllRoutesScreen({super.key});
 
-  bool _isLoading = false;
-  bool _searchPerformed = false;
-  List<DocumentSnapshot> _busResults = [];
+  @override
+  State<AllRoutesScreen> createState() => _AllRoutesScreenState();
+}
 
-  /// Swap locations
-  void _swapLocations() {
-    final tmp = _fromController.text;
-    setState(() {
-      _fromController.text = _toController.text;
-      _toController.text = tmp;
-    });
+class _AllRoutesScreenState extends State<AllRoutesScreen> {
+  late Future<List<BusRoute>> _routesFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _routesFuture = _fetchUniqueRoutes();
   }
 
-  /// Pick journey date
-  Future<void> _selectDate(BuildContext context) async {
-    final DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: selectedDate,
-      firstDate: DateTime.now(),
-      lastDate: DateTime(2026),
-    );
-    if (picked != null) setState(() => selectedDate = picked);
-  }
+  /// Fetches all buses and compiles a list of unique routes.
+  Future<List<BusRoute>> _fetchUniqueRoutes() async {
+    final busesSnapshot = await FirebaseFirestore.instance.collection('buses').get();
 
-  /// Firestore bus search
-  Future<void> _searchBuses() async {
-    if (_fromController.text.isEmpty || _toController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Enter both From and To')),
-      );
-      return;
+    // Use a Set to automatically handle uniqueness.
+    final Set<BusRoute> uniqueRoutes = {};
+
+    for (var doc in busesSnapshot.docs) {
+      try {
+        final bus = BusModel.fromFirestore(doc);
+        // Important Check: Only add the route if both locations are present.
+        // This prevents routes with missing data from being processed.
+        if (bus.fromLocation.isNotEmpty && bus.toLocation.isNotEmpty) {
+          uniqueRoutes.add(BusRoute(bus.fromLocation, bus.toLocation));
+        }
+      } catch (e) {
+        // This will catch any errors if a bus document has badly formatted data.
+        print('Could not parse bus document ${doc.id}: $e');
+      }
     }
 
-    setState(() {
-      _isLoading = true;
-      _searchPerformed = true;
-      _busResults = [];
-    });
-
-    try {
-      final querySnapshot = await FirebaseFirestore.instance
-          .collection('buses')
-          .where('from_location',
-              isEqualTo: _fromController.text.trim().toLowerCase())
-          .where('to_location',
-              isEqualTo: _toController.text.trim().toLowerCase())
-          .get();
-
-      setState(() => _busResults = querySnapshot.docs);
-    } catch (e) {
-      debugPrint("Error: $e");
-    } finally {
-      setState(() => _isLoading = false);
-    }
+    // Convert the Set to a List and sort it alphabetically by the 'from' location.
+    final sortedRoutes = uniqueRoutes.toList()
+      ..sort((a, b) => a.from.compareTo(b.from));
+    return sortedRoutes;
   }
+
+  // Helper function to capitalize the first letter of a string.
+  String _capitalize(String s) => s.isEmpty ? '' : s[0].toUpperCase() + s.substring(1);
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
-      body: SafeArea(
-        child: SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const SizedBox(height: 24),
-                _buildHeader(),
-                const SizedBox(height: 24),
-                _buildRouteSelector(),
-                const SizedBox(height: 16),
-                _buildDateSelector(),
-                const SizedBox(height: 24),
-                _buildSearchButton(),
-                const SizedBox(height: 24),
-                _buildResultsList(),
-              ],
-            ),
-          ),
-        ),
+      appBar: AppBar(
+        title: const Text('All Available Routes', style: TextStyle(color: Colors.white),),
+        backgroundColor: const Color(0xFF1E88E5), // nxtbusPrimaryBlue
       ),
-    );
-  }
+      body: FutureBuilder<List<BusRoute>>(
+        future: _routesFuture,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
 
-  Widget _buildHeader() {
-    return Row(
-      children: const [
-        Text("NXT", style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold)),
-        Text("Bus",
-            style: TextStyle(
-                fontSize: 32,
-                fontWeight: FontWeight.bold,
-                color: nxtbusPrimaryBlue)),
-      ],
-    );
-  }
+          if (snapshot.hasError) {
+            return Center(child: Text('Error: ${snapshot.error}'));
+          }
 
-  Widget _buildRouteSelector() {
-    return Container(
-      decoration: BoxDecoration(
-        border: Border.all(color: Colors.grey[300]!),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        children: [
-          _buildLocationRow("From", _fromController),
-          Row(
-            children: [
-              Expanded(child: Divider(color: Colors.grey[300], height: 1)),
-              GestureDetector(
-                onTap: _swapLocations,
-                child: CircleAvatar(
-                  backgroundColor: nxtbusPrimaryBlue,
-                  child: const Icon(Icons.swap_vert, color: Colors.white),
+          if (!snapshot.hasData || snapshot.data!.isEmpty) {
+            return const Center(
+              child: Text(
+                'No routes have been added yet.',
+                style: TextStyle(fontSize: 18, color: Colors.grey),
+              ),
+            );
+          }
+
+          final routes = snapshot.data!;
+
+          return ListView.builder(
+            padding: const EdgeInsets.all(12),
+            itemCount: routes.length,
+            itemBuilder: (context, index) {
+              final route = routes[index];
+              
+              // This is the new, improved UI for each route card
+              return Card(
+                elevation: 4,
+                margin: const EdgeInsets.symmetric(vertical: 8),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(15),
                 ),
-              ),
-              Expanded(child: Divider(color: Colors.grey[300], height: 1)),
-            ],
-          ),
-          _buildLocationRow("To", _toController),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildLocationRow(String hint, TextEditingController controller) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0),
-      child: TextField(
-        controller: controller,
-        decoration: InputDecoration(
-          hintText: hint,
-          border: InputBorder.none,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDateSelector() {
-    final datesToShow =
-        List.generate(5, (i) => selectedDate.add(Duration(days: i)));
-
-    return InkWell(
-      onTap: () => _selectDate(context),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.black87,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Row(
-          children: [
-            const Icon(Icons.calendar_today, color: Colors.white),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Row(
-                children: datesToShow.map((date) {
-                  final isSelected =
-                      date.day == selectedDate.day &&
-                          date.month == selectedDate.month;
-                  return GestureDetector(
-                    onTap: () => setState(() => selectedDate = date),
-                    child: Container(
-                      margin: const EdgeInsets.only(right: 8),
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: isSelected ? nxtbusPrimaryBlue : Colors.transparent,
-                        borderRadius: BorderRadius.circular(8),
+                shadowColor: const Color(0xFF1E88E5).withOpacity(0.2),
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Row(
+                    children: [
+                      // Icon on the left
+                      const CircleAvatar(
+                        backgroundColor: Color(0xFF1E88E5),
+                        child: Icon(Icons.route, color: Colors.white),
                       ),
-                      child: Text(DateFormat("d MMM").format(date),
-                          style: TextStyle(
-                              color: Colors.white,
-                              fontWeight: isSelected
-                                  ? FontWeight.bold
-                                  : FontWeight.normal)),
-                    ),
-                  );
-                }).toList(),
-              ),
-            ),
-            Text(DateFormat("MMM").format(selectedDate),
-                style: const TextStyle(color: nxtbusAccentBlue)),
-          ],
-        ),
+                      const SizedBox(width: 16),
+                      // Column for 'From' and 'To'
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              _capitalize(route.from),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 18,
+                                color: Color(0xFF212121),
+                              ),
+                            ),
+                            const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 4.0),
+                              child: Icon(
+                                Icons.arrow_downward,
+                                size: 16,
+                                color: Colors.grey,
+                              ),
+                            ),
+                            Text(
+                              _capitalize(route.to),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w500,
+                                fontSize: 16,
+                                color: Colors.black54,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      // Decorative bus icon on the right
+                      const Icon(
+                        Icons.directions_bus_filled,
+                        color: Colors.grey,
+                        size: 30,
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          );
+        },
       ),
-    );
-  }
-
-  Widget _buildSearchButton() {
-    return ElevatedButton(
-      onPressed: _searchBuses,
-      style: ElevatedButton.styleFrom(
-        backgroundColor: nxtbusPrimaryBlue,
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      ),
-      child: const Text("Search Buses",
-          style: TextStyle(fontSize: 18, color: Colors.white)),
-    );
-  }
-
-  Widget _buildResultsList() {
-    if (!_searchPerformed) return const SizedBox.shrink();
-    if (_isLoading) return const Center(child: CircularProgressIndicator());
-
-    if (_busResults.isEmpty) {
-      return const Text("No buses found.",
-          textAlign: TextAlign.center, style: TextStyle(color: nxtbusLightText));
-    }
-
-    return ListView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: _busResults.length,
-      itemBuilder: (context, i) {
-        final busDoc = _busResults[i];
-        final busData = busDoc.data() as Map<String, dynamic>;
-        return InkWell(
-          onTap: () => Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => SeatsPage(busId: busDoc.id, busData: busData, from: '', to: '', date: ''),
-            ),
-          ),
-          child: BusResultCard(busData: busData),
-        );
-      },
-    );
-  }
-}
-
-/// ---------- BUS RESULT CARD ----------
-class BusResultCard extends StatelessWidget {
-  final Map<String, dynamic> busData;
-  const BusResultCard({super.key, required this.busData});
-
-  @override
-  Widget build(BuildContext context) {
-    final price = busData['price']?['amount'] ?? "N/A";
-    final type = busData['bus_type'] ?? "Unknown";
-    final departure = busData['departure_time'] ?? "--:--";
-    final arrival = busData['arrival_time'] ?? "--:--";
-    final seats = busData['seats_available'] ?? 0;
-
-    return Card(
-      margin: const EdgeInsets.symmetric(vertical: 8),
-      child: ListTile(
-        title: Text(busData['name'] ?? "Bus"),
-        subtitle: Text("$type  |  Seats: $seats\n$departure → $arrival"),
-        trailing: Text("₹$price",
-            style: const TextStyle(
-                color: nxtbusPrimaryBlue, fontWeight: FontWeight.bold)),
-      ),
-    );
-  }
-}
-
-/// ---------- SEAT SELECTION PAGE (shortened for demo) ----------
-class SeatSelectionPage extends StatelessWidget {
-  final String busId;
-  final Map<String, dynamic> busData;
-
-  const SeatSelectionPage({super.key, required this.busId, required this.busData});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text(busData['name'] ?? "Seats")),
-      body: const Center(child: Text("Seat layout goes here...")),
     );
   }
 }

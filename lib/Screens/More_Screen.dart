@@ -165,7 +165,7 @@ class ProfileMoreScreen extends StatelessWidget {
             Expanded(
               child: ElevatedButton(
                 onPressed: () {
-                  Navigator.push(context, MaterialPageRoute(builder: (_) => const LoginPage()));
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => const LoginScreen()));
                 },
                 child: const Text("Login"),
               ),

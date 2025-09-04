@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:go_router/go_router.dart';
+import 'package:nxtbus/core/owner_bottom_bar.dart';
 
 // --- COLOR THEME ---
 const Color nxtbusPrimaryBlue = Color(0xFF1E88E5);
@@ -11,14 +13,14 @@ const Color nxtbusLightText = Color(0xFF757575);
 const Color white = Colors.white;
 
 // --- LOGIN PAGE WIDGET ---
-class LoginPage extends StatefulWidget {
-  const LoginPage({super.key});
+class LoginScreen extends StatefulWidget {
+  const LoginScreen({super.key});
 
   @override
-  State<LoginPage> createState() => _LoginPageState();
+  State<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginPageState extends State<LoginPage> {
+class _LoginScreenState extends State<LoginScreen> {
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
@@ -60,18 +62,11 @@ class _LoginPageState extends State<LoginPage> {
       final role = snapshot.data()?["role"];
 
       if (mounted) {
-        // Navigate based on the user's role
+        // Navigate based on the user's role using the app's router
         if (role == "owner") {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => const OwnerBottomNav()),
-          );
+          context.go('/owner');
         } else {
-          // Default navigation for any other role (e.g., 'user')
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => const UserMainScreen()),
-          );
+          context.go('/home');
         }
       }
     } catch (e) {
@@ -94,7 +89,8 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   String _getErrorMessage(String error) {
-    if (error.contains('user-not-found') || error.contains('INVALID_LOGIN_CREDENTIALS')) {
+    if (error.contains('user-not-found') ||
+        error.contains('INVALID_LOGIN_CREDENTIALS')) {
       return 'No user found with these credentials';
     } else if (error.contains('wrong-password')) {
       return 'Incorrect password';
@@ -221,7 +217,8 @@ class _LoginPageState extends State<LoginPage> {
                     child: TextFormField(
                       controller: emailController,
                       keyboardType: TextInputType.emailAddress,
-                      style: const TextStyle(color: nxtbusDarkText, fontSize: 16),
+                      style:
+                          const TextStyle(color: nxtbusDarkText, fontSize: 16),
                       decoration: InputDecoration(
                         hintText: 'Enter your email',
                         hintStyle: const TextStyle(color: nxtbusLightText),
@@ -275,7 +272,8 @@ class _LoginPageState extends State<LoginPage> {
                     child: TextFormField(
                       controller: passwordController,
                       obscureText: _obscurePassword,
-                      style: const TextStyle(color: nxtbusDarkText, fontSize: 16),
+                      style:
+                          const TextStyle(color: nxtbusDarkText, fontSize: 16),
                       decoration: InputDecoration(
                         hintText: 'Enter your password',
                         hintStyle: const TextStyle(color: nxtbusLightText),
@@ -391,165 +389,5 @@ class _LoginPageState extends State<LoginPage> {
         ),
       ),
     );
-  }
-}
-
-// --- USER ROLE SCREENS & NAVIGATION ---
-
-class UserMainScreen extends StatefulWidget {
-  const UserMainScreen({super.key});
-
-  @override
-  State<UserMainScreen> createState() => _UserMainScreenState();
-}
-
-class _UserMainScreenState extends State<UserMainScreen> {
-  int _selectedIndex = 0;
-
-  static const List<Widget> _screens = <Widget>[
-    UserHomeScreen(),
-    UserTripScreen(),
-    UserRoutesScreen(),
-    UserMoreScreen(),
-  ];
-
-  void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text("NXTBus User"),
-        backgroundColor: nxtbusPrimaryBlue,
-      ),
-      body: Center(
-        child: _screens.elementAt(_selectedIndex),
-      ),
-      bottomNavigationBar: BottomNavigationBar(
-        type: BottomNavigationBarType.fixed,
-        backgroundColor: Colors.white,
-        selectedItemColor: nxtbusPrimaryBlue,
-        unselectedItemColor: Colors.grey,
-        currentIndex: _selectedIndex,
-        onTap: _onItemTapped,
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: "Home"),
-          BottomNavigationBarItem(icon: Icon(Icons.trip_origin), label: "Trip"),
-          BottomNavigationBarItem(icon: Icon(Icons.route_sharp), label: "Routes"),
-          BottomNavigationBarItem(icon: Icon(Icons.more), label: "More"),
-        ],
-      ),
-    );
-  }
-}
-
-// --- OWNER ROLE SCREENS & NAVIGATION ---
-
-class OwnerBottomNav extends StatefulWidget {
-  const OwnerBottomNav({super.key});
-
-  @override
-  State<OwnerBottomNav> createState() => _OwnerBottomNavState();
-}
-
-class _OwnerBottomNavState extends State<OwnerBottomNav> {
-  int _selectedIndex = 0;
-
-  static const List<Widget> _screens = [
-    OwnerDashboardScreen(),
-    OwnerBusesScreen(),
-    OwnerProfileScreen(),
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text("NXTBus Owner"),
-        backgroundColor: nxtbusDarkBlue,
-      ),
-      body: _screens[_selectedIndex],
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _selectedIndex,
-        onTap: (index) {
-          setState(() {
-            _selectedIndex = index;
-          });
-        },
-        items: const [
-          BottomNavigationBarItem(
-              icon: Icon(Icons.dashboard), label: "Dashboard"),
-          BottomNavigationBarItem(
-              icon: Icon(Icons.directions_bus), label: "Buses"),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: "Profile"),
-        ],
-      ),
-    );
-  }
-}
-
-
-// --- PLACEHOLDER PAGES FOR NAVIGATION (FIXES THE ERROR) ---
-
-// User Pages
-class UserHomeScreen extends StatelessWidget {
-  const UserHomeScreen({super.key});
-  @override
-  Widget build(BuildContext context) {
-    return const Center(child: Text("User Home Screen"));
-  }
-}
-
-class UserTripScreen extends StatelessWidget {
-  const UserTripScreen({super.key});
-  @override
-  Widget build(BuildContext context) {
-    return const Center(child: Text("User Trip Screen"));
-  }
-}
-
-class UserRoutesScreen extends StatelessWidget {
-  const UserRoutesScreen({super.key});
-  @override
-  Widget build(BuildContext context) {
-    return const Center(child: Text("User Routes Screen"));
-  }
-}
-
-class UserMoreScreen extends StatelessWidget {
-  const UserMoreScreen({super.key});
-  @override
-  Widget build(BuildContext context) {
-    return const Center(child: Text("User More Screen"));
-  }
-}
-
-
-// Owner Pages
-class OwnerDashboardScreen extends StatelessWidget {
-  const OwnerDashboardScreen({super.key});
-  @override
-  Widget build(BuildContext context) {
-    return const Center(child: Text("Owner Dashboard Screen"));
-  }
-}
-
-class OwnerBusesScreen extends StatelessWidget {
-  const OwnerBusesScreen({super.key});
-  @override
-  Widget build(BuildContext context) {
-    return const Center(child: Text("Manage Buses Screen"));
-  }
-}
-
-class OwnerProfileScreen extends StatelessWidget {
-  const OwnerProfileScreen({super.key});
-  @override
-  Widget build(BuildContext context) {
-    return const Center(child: Text("Owner Profile Screen"));
   }
 }
